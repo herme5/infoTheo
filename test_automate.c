@@ -23,5 +23,29 @@
 #include "outils.h"
 
 int main(){
-	A_FAIRE_RETURN(0);
+	Automate * a = creer_automate();
+	
+	ajouter_transition(a, 0, 'a', 1);
+	ajouter_transition(a, 1, 'a', 2);
+	ajouter_transition(a, 1, 'b', 3);
+	ajouter_transition(a, 1, 'b', 4);
+	ajouter_transition(a, 2, 'b', 5);
+	ajouter_transition(a, 4, 'a', 2);
+	ajouter_transition(a, 4, 'b', 4);
+	ajouter_transition(a, 5, 'a', 2);
+	ajouter_transition(a, 5, 'b', 3);
+	ajouter_etat_initial(a, 0);
+	ajouter_etat_final(a, 3);
+	
+	Automate * b = miroir(a);
+	Automate * c = creer_automate_des_suffixes(a);
+
+	printf("\n========automate(a)==========\n");
+	print_automate(a);
+	printf("\n========miroir(a)==========\n");
+	print_automate(b);
+	printf("\n========suffixe(a)==========\n");
+	print_automate(c);
+
+	return 1;
 }
