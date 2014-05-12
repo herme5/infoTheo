@@ -107,6 +107,11 @@ int main(){
 	Automate * i = automate_co_accessible( a );
 	print_automate(i);
 	printf("\n");
+
+	printf("\n==========melange(a,a2)================\n");
+	Automate * j = creer_automate_du_melange( a, a2 );
+	print_automate(j);
+	printf("\n");
 	
 	return 0;
 }
