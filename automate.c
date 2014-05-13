@@ -745,7 +745,7 @@ Automate * creer_automate_de_concatenation( const Automate * automate1,
 }
 
 /* l'automate des sous-mots, 
- * corresponds à l'automate dont tous les états accessibles sont inititiaux
+ * corresponds à l'automate dont tous les états accessibles sont initiaux
  * et finaux, on creer on donc l'automate des prefixes de l'automate des
  * des suffixes de l'automate accessibles de l'automate passé en paramètre.
  */
@@ -756,6 +756,29 @@ Automate * creer_automate_des_sous_mots( const Automate* automate ){
 }
 
 Automate * creer_automate_du_melange( const Automate* automate1, const Automate* automate2 ){
+    Automate * res = creer_automate();
+
+    // melange( w, epsilon ) := w
+    if (taille_ensemble( automate1->etats ) == 0)
+	return automate2 ;
+    
+    // melange( epsilon, w ) := w
+    if (taille_ensemble( automate2->etats ) == 0)
+	return automate1 ;
+
+    // melange( a.w1, b.W2 ) := a.melange( w1, b.w2 ) + b.melange( a.w1, w2 )
+    Table_iterateur it1, it2;
+    Cle * cle_a1 = get_element(premier_iterateur_ensemble( automate1->initiaux ));
+    Cle * cle_a2 = get_element(premier_iterateur_ensemble( automate2->initiaux ));
+    char a1 = ;
+    char a2 = ;
+    
+    // on branche une transition aux melanges des automates (automate dont
+    // états initiaux sont décalé de 1.
+    Automate *rec_automate1 = ;
+    Automate *rec_automate2 = ;
+    
+
     A_FAIRE_RETURN(NULL);
 }
 
