@@ -32,9 +32,9 @@ int main(){
 	ajouter_transition(a, 2, 'b', 3);
 	ajouter_transition(a, 3, 'b', 2);
 	ajouter_transition(a, 3, 'b', 4);
-	ajouter_transition(a, 5, 'c', 3);
 	ajouter_transition(a, 2, 'a', 6);
 	ajouter_transition(a, 7, 'a', 4);
+	ajouter_transition(a, 5, 'c', 3);
 	ajouter_etat_initial(a, 1);
 	ajouter_etat_final(a, 2);
 	ajouter_etat_final(a, 3);
@@ -49,12 +49,10 @@ int main(){
 	ajouter_etat_final(a2, 4);
 	print_automate(a2);
 	
-	/*
 	printf("\n==========delta_star()=============\n");
 	printf("delta_star(a, I, \"abb\") : ");
 	print_ensemble(delta_star(a, get_initiaux(a), "abb"), NULL);
 	printf("\n");
-	*/
 
 	printf("\n==========mot_to_automate==========\n");
 	Automate * z = mot_to_automate( "automate" );
@@ -70,48 +68,53 @@ int main(){
 	print_automate(b);
 	printf("\n");
 
-	printf("\n==========suffixe(a)===============\n");
+	printf("\n==========suffixes(a)===============\n");
 	Automate * c = creer_automate_des_suffixes( a );
 	print_automate(c);
 	printf("\n");
 
-	printf("\n==========prefixe(a)===============\n");
+	printf("\n==========prefixes(a)===============\n");
 	Automate * d = creer_automate_des_prefixes( a );
 	print_automate(d);
 	printf("\n");
 
-	printf("\n==========sousmots(a)===============\n");
-	Automate * e = creer_automate_des_sous_mots( a );
+	printf("\n==========facteurs(a)===============\n");
+	Automate * e = creer_automate_des_facteurs( a );
 	print_automate(e);
+	printf("\n");
+
+	printf("\n==========sousmots(a)===============\n");
+	Automate * f = creer_automate_des_sous_mots( a );
+	print_automate(f);
 	printf("\n");
 
 	printf("\n==========surmots(a)================\n");
 	Ensemble * alphabet = creer_ensemble(NULL, NULL, NULL);
 	ajouter_element(alphabet, 'm');
 	ajouter_elements(alphabet, get_alphabet(a));
-	Automate * f = creer_automate_des_sur_mot( a, alphabet );
-	print_automate(f);
-	printf("\n");
-
-	printf("\n==========concatenation(a,a2)========\n");
-	Automate * g = creer_automate_de_concatenation( a, a2);
+	Automate * g = creer_automate_des_sur_mot( a, alphabet );
 	print_automate(g);
 	printf("\n");
 
-	printf("\n==========miroir(a)================\n");
-	Automate * h = miroir( a );
+	printf("\n==========concatenation(a2,a2)========\n");
+	Automate * h = creer_automate_de_concatenation( a2, a2);
 	print_automate(h);
 	printf("\n");
 
-	printf("\n==========co-accessible(a)================\n");
-	Automate * i = automate_co_accessible( a );
+	printf("\n==========miroir(a)================\n");
+	Automate * i = miroir( a );
 	print_automate(i);
 	printf("\n");
 
-	printf("\n==========melange(a,a2)================\n");
-	Automate * j = creer_automate_du_melange( a, a2 );
+	printf("\n==========co-accessible(a)================\n");
+	Automate * j = automate_co_accessible( a );
 	print_automate(j);
 	printf("\n");
-	
+
+	printf("\n==========melange(a,a2)================\n");
+	Automate * k = creer_automate_du_melange( a, a2 );
+	print_automate(k);
+	printf("\n");
+
 	return 0;
 }

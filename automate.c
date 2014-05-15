@@ -664,6 +664,31 @@ Automate * creer_automate_etat_different( const Automate * src,
     return res;
 }
 
+/* Atoute l'équivalent d'une epsilon-transition entre origine et fin
+ * Càd pour toute transition (fin, l) -> E 
+ * On ajoute la transition (origine, l) -> E
+ */
+void ajouter_epsilon_transition(Automate * automate, int origine, int fin){
+    Table_iterateur it1;
+    Ensemble_iterateur it2;
+   
+    for( it1 = premier_iterateur_table( automate->transitions );
+	 ! iterateur_ensemble_est_vide( it1 );
+	 it1 = iterateur_suivant_ensemble( it1 )
+	 ){
+	Cle * cle = (Cle*) get_cle( it1 );
+	
+	if(cle->origine == fin){
+	  for( it2 = premier_iterateur_ensemble((Ensemble*) get_valeur( it1 ));
+	       ! iterateur_ensemble_est_vide( it2 );
+	       it2 = iterateur_suivant_ensemble( it2 )
+	       ){
+	    ajouter_transition(automate, origine, cle->lettre, get_element(it2));
+	  }
+	}
+    }
+}
+
 /* On prévoit le cas où l'automate2 utilise les mêmes entiers que les états de
  * l'automate1. La fonction creer_automate_different() assure qu'il n'y aura 
  * pas conflit entre les états des deux automates.
@@ -736,7 +761,7 @@ Automate * creer_automate_de_concatenation( const Automate * automate1,
 	     ){
 	    retirer_element(res->finaux, get_element( it1 ));
 	    retirer_element(res->initiaux, get_element( it2 ));
-	    ajouter_transition(res, get_element( it1), -1, get_element( it2 ));
+	    ajouter_epsilon_transition(res, get_element( it1), get_element( it2 ));
 	}
     }
     return res;
@@ -747,12 +772,12 @@ Automate * creer_automate_de_concatenation( const Automate * automate1,
  * en d'autres termes on branches l'état X à tous les états accessibles depuis Y.
  */
 Automate * creer_automate_des_sous_mots( const Automate* automate ){
-    Automate * res = creer_automate_des_facteurs( automate ));
+    Automate * res = creer_automate_des_facteurs( automate );
     Table_iterateur it1;
     Ensemble_iterateur it2;
     Ensemble_iterateur it3;
 
-    // on prépare l'état X la lettre et l'état Y.
+    // on prépare l'état X, la lettre et l'état Y.
     for( it1 = premier_iterateur_table( automate->transitions );
 	 ! iterateur_ensemble_est_vide( it1 );
 	 it1 = iterateur_suivant_ensemble( it1 )
@@ -826,10 +851,7 @@ void print_ensemble_2( const intptr_t ens ){
 }
 
 void print_lettre( intptr_t c ){
-    if (c == -1)
-	printf( "%s" , "ε");
-    else 
-	printf("%c", (char) c );
+  printf("%c", (char) c );
 }
 
 void print_automate( const Automate * automate ){
