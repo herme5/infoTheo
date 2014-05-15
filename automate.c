@@ -79,6 +79,9 @@ void supprimer_cle( Cle * cle ){
     xfree( cle );
 }
 
+void supprimer_etat( Automate * automate, int etat );
+void ajouter_transitions( Automate * automate, Table * transitions );
+
 void initialiser_cle( Cle * cle, int origine, char lettre ){
     cle->origine = origine;
     cle->lettre = (int) lettre;
@@ -562,51 +565,45 @@ Automate * creer_automate_des_prefixes( const Automate* automate ){
  */
 Automate * creer_automate_des_suffixes( const Automate* automate ){
     Automate * res = copier_automate(automate);
-    ajouter_elements(res->initiaux, get_etats(automate_co_accessible( automate )));
+    ajouter_elements(res->initiaux, get_etats(automate_accessible( automate )));
     return res;
 }
 
+
+/* l'automate des facteurs, corresponds à l'automate dont tous les états
+ * accessibles sont initiaux et finaux, on creer on donc l'automate des
+ * prefixes de l'automate des des suffixes de l'automate accessibles de
+ * l'automate passé en paramètre.
+ */
 Automate * creer_automate_des_facteurs( const Automate* automate ){
-    A_FAIRE_RETURN(NULL);
+    return creer_automate_des_suffixes
+	( creer_automate_des_prefixes
+	  ( automate_accessible( automate )));
 }
 
 Automate * creer_automate_des_sur_mot( const Automate* automate, Ensemble * alphabet ){
-    Automate * res = copier_automate(automate);
-    int e1, e2;
-    Ensemble_iterateur it1;
+  Automate * res = copier_automate(automate);
+  int e;
+  Ensemble_iterateur it1, it2;
 	
-    ajouter_elements(res->alphabet, alphabet);
-	
-    e1 = get_etat_libre(res);
-    ajouter_etat_initial(res, e1);
-    e2 = get_etat_libre(res);
-    ajouter_etat_final(res, e2);
-	
-    for(
-	it1 = premier_iterateur_ensemble( alphabet );
-	! iterateur_ensemble_est_vide( it1 );
-	it1 = iterateur_suivant_ensemble( it1 )
-	){
-	ajouter_transition(res, e1, get_element( it1 ), e1);
-	ajouter_transition(res, e2, get_element( it1 ), e2);
+  ajouter_elements(res->alphabet, alphabet);
+
+  for( it1 = premier_iterateur_ensemble( get_etats( res ) );
+       ! iterateur_ensemble_est_vide( it1 );
+       it1 = iterateur_suivant_ensemble( it1 )
+       )
+    {
+      e = get_element( it1 );
+      for(
+	  it2 = premier_iterateur_ensemble( res->alphabet );
+	  ! iterateur_ensemble_est_vide( it2 );
+	  it2 = iterateur_suivant_ensemble( it2 )
+	  )
+	{
+	  ajouter_transition(res, e, get_element( it2 ), e);
+	}
     }
-    for(
-	it1 = premier_iterateur_ensemble( get_initiaux( res ));
-	! iterateur_ensemble_est_vide( it1 );
-	it1 = iterateur_suivant_ensemble( it1 )
-	){
-	if (e1 != get_element( it1 ))
-	    ajouter_transition(res, e1, -1 , get_element( it1 ));
-    }
-    for(
-	it1 = premier_iterateur_ensemble( get_finaux( res ));
-	! iterateur_ensemble_est_vide( it1 );
-	it1 = iterateur_suivant_ensemble( it1 )
-	){
-	if (e2 != get_element( it1 ))
-	    ajouter_transition(res, get_element( it1 ), -1 , e2);
-    }
-    return res;
+  return res;
 }
 
 /* Renvoie l'automate destination, dont le nom de tous les états est
@@ -636,12 +633,14 @@ Automate * creer_automate_etat_different( const Automate * src,
 	    ajouter_etat_initial( res, new_etat );
     }
     // On ajoute les lettres
+    /*
     for( it1 = premier_iterateur_ensemble( get_alphabet( dst ) );
 	 ! iterateur_ensemble_est_vide( it1 );
 	 it1 = iterateur_suivant_ensemble( it1 )
 	 ){
 	ajouter_lettre( res, (char) get_element( it1 ) );
     }
+    */
     // On ajoute les transitions
     Table_iterateur it2;
     for( it2 = premier_iterateur_table( dst->transitions );
@@ -744,42 +743,61 @@ Automate * creer_automate_de_concatenation( const Automate * automate1,
     return res;
 }
 
-/* l'automate des sous-mots, 
- * corresponds à l'automate dont tous les états accessibles sont initiaux
- * et finaux, on creer on donc l'automate des prefixes de l'automate des
- * des suffixes de l'automate accessibles de l'automate passé en paramètre.
+/* L'automate des sous mots correspond à l'automate auquel pour chaque transition
+ * (X,u1)->Y on ajoute les transitions (X,u1)->{tous les états accessibles depuis Y},
+ * en d'autres termes on branches l'état X à tous les états accessibles depuis Y.
  */
 Automate * creer_automate_des_sous_mots( const Automate* automate ){
-    return creer_automate_des_suffixes
-	( creer_automate_des_prefixes
-	  ( automate_accessible( automate )));
+    Automate * res = copier_automate( automate );
+    Table_iterateur it1;
+    Ensemble_iterateur it2;
+    Ensemble_iterateur it3;
+
+    // on prépare l'état X la lettre et l'état Y.
+    for( it1 = premier_iterateur_table( automate->transitions );
+	 ! iterateur_ensemble_est_vide( it1 );
+	 it1 = iterateur_suivant_ensemble( it1 )
+	 ){
+	Cle * cle = (Cle*) get_cle( it1 );
+	Ensemble * fins = (Ensemble*) get_valeur( it1 );
+	for( it2 = premier_iterateur_ensemble( fins );
+	     ! iterateur_ensemble_est_vide( it2 );
+	     it2 = iterateur_suivant_ensemble( it2 )
+	     ){
+	    int x = cle->origine;
+	    char c = cle->lettre;
+	    int y = get_element( it2 );
+	    Ensemble * accessibles = etats_accessibles( automate, y);
+
+	    //on procède à l'ajout des transitions (X,u1)->{etats accessibles}
+	    for( it3 = premier_iterateur_ensemble( accessibles );
+		 ! iterateur_ensemble_est_vide( it3 );
+		 it3 = iterateur_suivant_ensemble( it3 )
+		 ){ 
+		ajouter_transition(res, x, c, get_element( it3 ));
+	    }
+	}
+    }
+    return res;
 }
 
 Automate * creer_automate_du_melange( const Automate* automate1, const Automate* automate2 ){
     Automate * res = creer_automate();
+    Automate * A = copier_automate(automate1);
+    Automate * B = creer_automate_etat_different(automate1, automate2);
+	    
+    ajouter_elements(res->etats,
+		     creer_union_ensemble(A->etats, B->etats));
+    ajouter_elements(res->initiaux,
+		     creer_union_ensemble(A->initiaux, B->initiaux));
+    ajouter_elements(res->finaux,
+		     creer_union_ensemble(A->finaux, B->finaux));
+    ajouter_elements(res->alphabet,
+		     creer_union_ensemble(A->alphabet, B->alphabet));
+    ajouter_transitions(res, A->transitions);
+    ajouter_transitions(res, B->transitions);
 
-    // melange( w, epsilon ) := w
-    if (taille_ensemble( automate1->etats ) == 0)
-	return automate2 ;
-    
-    // melange( epsilon, w ) := w
-    if (taille_ensemble( automate2->etats ) == 0)
-	return automate1 ;
-
-    // melange( a.w1, b.W2 ) := a.melange( w1, b.w2 ) + b.melange( a.w1, w2 )
-    Table_iterateur it1, it2;
-    Cle * cle_a1 = get_element(premier_iterateur_ensemble( automate1->initiaux ));
-    Cle * cle_a2 = get_element(premier_iterateur_ensemble( automate2->initiaux ));
-    char a1 = ;
-    char a2 = ;
-    
-    // on branche une transition aux melanges des automates (automate dont
-    // états initiaux sont décalé de 1.
-    Automate *rec_automate1 = ;
-    Automate *rec_automate2 = ;
-    
-
-    A_FAIRE_RETURN(NULL);
+    return res;
 }
 
 int est_une_transition_de_l_automate( const Automate* automate,
@@ -840,4 +858,61 @@ int le_mot_est_reconnu( const Automate* automate, const char* mot ){
 	    (creer_intersection_ensemble
 	     (accessible,
 	      get_finaux( automate ))) > 0);
+}
+
+/* Supprime un de l'automate, un état passé en paramètre.
+ */
+void supprimer_etat(Automate * automate, int etat){
+    // on maintient un ensemble des transitions à supprimer.
+    Ensemble * trans_a_suppr = creer_ensemble(NULL, NULL, NULL);
+    Table_iterateur it1;
+    Ensemble_iterateur it2;
+
+    retirer_element(automate->etats, etat);
+    retirer_element(automate->initiaux, etat);
+    retirer_element(automate->finaux, etat);
+
+    // on met à jour cet ensemble
+    for( it1 = premier_iterateur_table( automate->transitions );
+	 ! iterateur_ensemble_est_vide( it1 );
+	 it1 = iterateur_suivant_ensemble( it1 )
+	 ){
+	Cle * cle = (Cle*) get_cle( it1 );
+	Ensemble * fins = (Ensemble*) get_valeur( it1 );
+	if (cle->origine == etat) {
+	    ajouter_element(trans_a_suppr, (intptr_t) cle);
+	} else {
+	    retirer_element(fins, etat);
+	}
+    }
+    // On supprime dans une autre boucle car on ne peut pas supprimer
+    // un élément pendant qu'on utilise la structure iterateur.
+    for( it2 = premier_iterateur_ensemble( trans_a_suppr );
+	 ! iterateur_ensemble_est_vide( it2 );
+	 it2 = iterateur_suivant_ensemble( it2 )
+	 ){
+	delete_table(automate->transitions, get_element( it2 ));
+    }
+    liberer_ensemble(trans_a_suppr);
+}
+
+/* Ajoute un ensemble de transition dans l'automate automate.
+ */
+void ajouter_transitions( Automate * automate, Table * transitions ){
+    Table_iterateur it1;
+    Ensemble_iterateur it2;
+
+    for( it1 = premier_iterateur_table( transitions );
+	 ! iterateur_ensemble_est_vide( it1 );
+	 it1 = iterateur_suivant_ensemble( it1 )
+	 ){
+	Cle * cle = (Cle*) get_cle( it1 );
+	Ensemble * fins = (Ensemble*) get_valeur( it1 );
+	for( it2 = premier_iterateur_ensemble( fins );
+	     ! iterateur_ensemble_est_vide( it2 );
+	     it2 = iterateur_suivant_ensemble( it2 )
+	     ){
+	    ajouter_transition(automate, cle->origine, cle->lettre, get_element( it2 ));
+	}
+    }
 }
