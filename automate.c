@@ -577,8 +577,7 @@ Automate * creer_automate_des_suffixes( const Automate* automate ){
  */
 Automate * creer_automate_des_facteurs( const Automate* automate ){
     return creer_automate_des_suffixes
-	( creer_automate_des_prefixes
-	  ( automate_accessible( automate )));
+	( creer_automate_des_prefixes( automate ));
 }
 
 Automate * creer_automate_des_sur_mot( const Automate* automate, Ensemble * alphabet ){
@@ -748,7 +747,7 @@ Automate * creer_automate_de_concatenation( const Automate * automate1,
  * en d'autres termes on branches l'état X à tous les états accessibles depuis Y.
  */
 Automate * creer_automate_des_sous_mots( const Automate* automate ){
-    Automate * res = copier_automate( automate );
+    Automate * res = creer_automate_des_facteurs( automate ));
     Table_iterateur it1;
     Ensemble_iterateur it2;
     Ensemble_iterateur it3;
