@@ -45,6 +45,9 @@ typedef struct _Cle {
     int lettre;
 } Cle;
 
+void supprimer_etat( Automate * automate, int etat );
+void ajouter_transitions( Automate * automate, Table * transitions );
+
 int comparer_cle(const Cle * a, const Cle * b){
     if( a->origine < b->origine )
 	return -1;
@@ -57,13 +60,8 @@ int comparer_cle(const Cle * a, const Cle * b){
     return 0;
 }
 
-/* Ajout de l'affichage d'epsilon
- */
 void print_cle( const Cle * a){
-    if (a->lettre == -1)
-	printf( "(%d, %s)" , a->origine, "ε");
-    else
-	printf( "(%d, %c)" , a->origine, (char) (a->lettre) );
+    printf( "(%d, %c)" , a->origine, (char) (a->lettre) );
 }
 
 /* retourne un état non utilisé correspond au plus petit entier
@@ -71,16 +69,13 @@ void print_cle( const Cle * a){
  */
 int get_etat_libre(Automate * automate){
     int i = 0;
-    for ( ; est_un_etat_de_l_automate(automate, i); i++);
+    for ( ; est_un_etat_de_l_automate( automate, i); i++);
     return i;
 }
 
 void supprimer_cle( Cle * cle ){
     xfree( cle );
 }
-
-void supprimer_etat( Automate * automate, int etat );
-void ajouter_transitions( Automate * automate, Table * transitions );
 
 void initialiser_cle( Cle * cle, int origine, char lettre ){
     cle->origine = origine;
@@ -435,15 +430,15 @@ Ensemble * etats_accessibles( const Automate * automate, int etat ){
     while (! iterateur_ensemble_est_vide( it )){
 	Ensemble * voisins = delta( automate, res, get_element( it ));
 
-	// Si res inter voisin = voisin on a pas besoin d'ajouter
+	// Si res inter voisins = voisins on a pas besoin d'ajouter
 	// d'éléments.
-	if(comparer_ensemble( creer_intersection_ensemble(res, voisins),
-			      voisins) == 0 ){
+	if( comparer_ensemble( creer_intersection_ensemble(res, voisins),
+			       voisins) == 0 ){
 	    it = iterateur_suivant_ensemble( it );
 	}
 	// Sinon on ajoute le(s) élément(s) et on repart au début
 	// de l'alphabet.
-	else{
+	else {
 	    ajouter_elements( res, voisins );
 	    it = premier_iterateur_ensemble( automate->alphabet );
 	}
@@ -478,7 +473,7 @@ Automate * automate_accessible( const Automate * automate){
     // aux ensembles de celui de l'ancien automate, intersecté
     // avec l'ensemble des états accessibles.
     // - l'alphabet n'est pas copié car l'ajout de transition, assure
-    // l'ajout des lettres concernés. (on peut avoir le d'une réduction
+    // l'ajout des lettres concernés. (on peut avoir le cas d'une réduction
     // de l'alphabet lors de la construction d'un automate plus petit).
 	
     res->vide = creer_ensemble( NULL, NULL, NULL);
@@ -490,6 +485,7 @@ Automate * automate_accessible( const Automate * automate){
     ajouter_elements(res->finaux, 
 		     creer_intersection_ensemble( get_finaux(automate),
 						  accessibles));
+
     // On met à jour les transitions : il faut que l'état d'origine et
     // l'état d'arrivé soient tous deux accessibles.
     for ( it2 = premier_iterateur_table( automate->transitions );
@@ -511,7 +507,7 @@ Automate * automate_accessible( const Automate * automate){
     return res;
 }
 
-/* On creer un automate en copiant l'alphabet et les états,
+/* On creer un automate en copiant l'alphabet, les états,
  * en inversant initiaux et finiaux, et en copiant les transitions
  * dans le sens inverse.
  */
@@ -552,7 +548,7 @@ Automate * automate_co_accessible( const Automate * automate){
 }
 
 /* L'automate des préfixes correspond à l'automate dont tous les états
- * accessibles sont finaux.
+ * co-accessibles sont finaux.
  */
 Automate * creer_automate_des_prefixes( const Automate* automate ){
     Automate * res = copier_automate(automate);
@@ -570,38 +566,37 @@ Automate * creer_automate_des_suffixes( const Automate* automate ){
 }
 
 
-/* l'automate des facteurs, corresponds à l'automate dont tous les états
+/* l'automate des facteurs, correspond à l'automate dont tous les états
  * accessibles sont initiaux et finaux, on creer on donc l'automate des
- * prefixes de l'automate des des suffixes de l'automate accessibles de
- * l'automate passé en paramètre.
+ * prefixes de l'automate des suffixes de l'automate passé en paramètre.
  */
 Automate * creer_automate_des_facteurs( const Automate* automate ){
     return creer_automate_des_suffixes
 	( creer_automate_des_prefixes( automate ));
 }
 
+/* l'automate des sur-mots, correspond à l'automate dont tous les états
+ * possède une boucle pour chaque lettre de l'alphapbet.
+ */
 Automate * creer_automate_des_sur_mot( const Automate* automate, Ensemble * alphabet ){
   Automate * res = copier_automate(automate);
   int e;
   Ensemble_iterateur it1, it2;
 	
   ajouter_elements(res->alphabet, alphabet);
-
+  
   for( it1 = premier_iterateur_ensemble( get_etats( res ) );
        ! iterateur_ensemble_est_vide( it1 );
        it1 = iterateur_suivant_ensemble( it1 )
-       )
-    {
+       ){
       e = get_element( it1 );
-      for(
-	  it2 = premier_iterateur_ensemble( res->alphabet );
-	  ! iterateur_ensemble_est_vide( it2 );
-	  it2 = iterateur_suivant_ensemble( it2 )
-	  )
-	{
+      for( it2 = premier_iterateur_ensemble( res->alphabet );
+	   ! iterateur_ensemble_est_vide( it2 );
+	   it2 = iterateur_suivant_ensemble( it2 )
+	   ){
 	  ajouter_transition(res, e, get_element( it2 ), e);
-	}
-    }
+      }
+  }
   return res;
 }
 
@@ -615,8 +610,8 @@ Automate * creer_automate_etat_different( const Automate * src,
     Automate * copie_src = copier_automate(src);
     Table * table_corresp_etats = creer_table(NULL, NULL, NULL);
 
-    Ensemble_iterateur it1;
     // On ajoute les états de l'automate
+    Ensemble_iterateur it1;
     for( it1 = premier_iterateur_ensemble( get_etats( dst ) );
 	 ! iterateur_ensemble_est_vide( it1 );
 	 it1 = iterateur_suivant_ensemble( it1 )
@@ -631,15 +626,7 @@ Automate * creer_automate_etat_different( const Automate * src,
 	if( est_un_etat_initial_de_l_automate( dst, get_element( it1 )))
 	    ajouter_etat_initial( res, new_etat );
     }
-    // On ajoute les lettres
-    /*
-    for( it1 = premier_iterateur_ensemble( get_alphabet( dst ) );
-	 ! iterateur_ensemble_est_vide( it1 );
-	 it1 = iterateur_suivant_ensemble( it1 )
-	 ){
-	ajouter_lettre( res, (char) get_element( it1 ) );
-    }
-    */
+
     // On ajoute les transitions
     Table_iterateur it2;
     for( it2 = premier_iterateur_table( dst->transitions );
@@ -664,8 +651,8 @@ Automate * creer_automate_etat_different( const Automate * src,
     return res;
 }
 
-/* Atoute l'équivalent d'une epsilon-transition entre origine et fin
- * Càd pour toute transition (fin, l) -> E 
+/* Ajoute l'équivalent d'une epsilon-transition entre origine et fin
+ * C.à.d. pour toute transition (fin, l) -> E 
  * On ajoute la transition (origine, l) -> E
  */
 void ajouter_epsilon_transition(Automate * automate, int origine, int fin){
@@ -693,7 +680,7 @@ void ajouter_epsilon_transition(Automate * automate, int origine, int fin){
  * l'automate1. La fonction creer_automate_different() assure qu'il n'y aura 
  * pas conflit entre les états des deux automates.
  * Ensuite on branche tous les états finaux de l'automate1 aux états initiaux 
- * de l'automate2 via des epsilon-transition.
+ * de l'automate2 via des pseudo-epsilon-transition.
  */
 Automate * creer_automate_de_concatenation( const Automate * automate1,
 					    const Automate * automate2
@@ -770,6 +757,8 @@ Automate * creer_automate_de_concatenation( const Automate * automate1,
 /* L'automate des sous mots correspond à l'automate auquel pour chaque transition
  * (X,u1)->Y on ajoute les transitions (X,u1)->{tous les états accessibles depuis Y},
  * en d'autres termes on branches l'état X à tous les états accessibles depuis Y.
+ * Par ailleurs on rend tous les états initiaux et finaux, car les préfixes et 
+ * les suffixes sont inclus dans l'ensemble des sous-mot générable par l'automate.
  */
 Automate * creer_automate_des_sous_mots( const Automate* automate ){
     Automate * res = creer_automate_des_facteurs( automate );
@@ -907,7 +896,7 @@ void supprimer_etat(Automate * automate, int etat){
 	}
     }
     // On supprime dans une autre boucle car on ne peut pas supprimer
-    // un élément pendant qu'on utilise la structure iterateur.
+    // un élément pendant qu'on utilise sa structure iterateur.
     for( it2 = premier_iterateur_ensemble( trans_a_suppr );
 	 ! iterateur_ensemble_est_vide( it2 );
 	 it2 = iterateur_suivant_ensemble( it2 )
@@ -917,7 +906,7 @@ void supprimer_etat(Automate * automate, int etat){
     liberer_ensemble(trans_a_suppr);
 }
 
-/* Ajoute un ensemble de transition dans l'automate automate.
+/* Ajoute un ensemble de transitions dans l'automate automate.
  */
 void ajouter_transitions( Automate * automate, Table * transitions ){
     Table_iterateur it1;
